@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Solar</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: radial-gradient(circle at center, #000010, #000000 80%);
+    color: white;
+  }
+  nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: rgba(0,0,0,0.6);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    z-index: 10;
+  }
+  nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  .hero {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%, -50%);
+    text-align:center;
+    z-index:5;
+  }
+  .hero h1 {
+    font-size:3.5em;
+    margin:0;
+    opacity:0;
+    animation:fadeUp 2s forwards;
+  }
+  .hero p {
+    margin-top:15px;
+    font-size:1.3em;
+    opacity:0;
+    animation:fadeUp 2s 1s forwards;
+  }
+  @keyframes fadeUp {
+    from { transform: translateY(40px); opacity:0;}
+    to { transform: translateY(0); opacity:1;}
+  }
+
+  #infoPanel {
+    position: fixed;
+    bottom: -100%;
+    left: 0;
+    width: 100%;
+    padding: 40px;
+    box-sizing: border-box;
+    max-height: 60%;
+    overflow-y: auto;
+    z-index: 20;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    transition: bottom 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  }
+  #infoPanel.active { bottom: 0; }
+
+  #fadeOverlay {
+    position: fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:black;
+    opacity:0;
+    pointer-events:none;
+    z-index:30;
+    transition: opacity 1s ease;
+  }
+
+  canvas { display:block;}
+</style>
+</head>
+<body>
+<div id="fadeOverlay"></div>
+
+<nav>
+  <a href="anim.html">Earth</a>
+  <a href="mars.html">Mars</a>
+  <a href="venus.html">Venus</a>
+  <a href="jupitar.html">Jupiter</a>
+  <a href="saturn.html">Saturn</a>
+  <a href="uranus.html">Uranus</a>
+  <a href="naptune.html">Neptune</a>
+  <a href="mercury.html">Mercury</a>
+</nav>
+
+<div class="hero">
+  <h1>Welcome to Mars 🌕</h1>
+  <p>Mars in true color,[a] as captured by the Hope orbiter. The Tharsis Montes can be seen at the center, with Olympus Mons just to the left and Valles Marineris at the right.</p>
+</div>
+
+<div id="infoPanel">
+  <button id="closeBtn" style="margin-bottom:20px; padding:5px 10px; cursor:pointer;">Close</button>
+  <h2>About mars 🌕</h2>
+  <p>
+   Mars is the fourth planet from the Sun. It is also known as the "Red Planet", because of its orange-red appearance.[22][23] Mars is a desert-like rocky planet with a tenuous carbon dioxide (CO2) atmosphere. At the average surface level the atmospheric pressure is a few thousandths of Earth's, atmospheric temperature ranges from −153 to 20 °C (−243 to 68 °F)[24] and cosmic radiation is high. Mars retains some water, in the ground as well as thinly in the atmosphere, forming cirrus clouds, frost, larger polar regions of permafrost and ice caps (with seasonal CO2 snow), but no liquid surface water. Its surface gravity is roughly a third of Earth's or double that of the Moon. It is half as wide as Earth or twice the Moon, with a diameter of 6,779 km (4,212 mi), and has a surface area the size of all the dry land of Earth.
+  </p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+<script>
+const fadeOverlay = document.getElementById('fadeOverlay');
+const infoPanel = document.getElementById('infoPanel');
+const closeBtn = document.getElementById('closeBtn');
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000, 0.0015); // subtle depth
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Lighting
+const light = new THREE.PointLight(0xffffff,1.5);
+light.position.set(5,5,5);
+scene.add(light);
+
+// Planets
+const earthTexture = new THREE.TextureLoader().load("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSCFNAGpDrBEzG82OjH3zgA26Xos-ged0wkxg&sg");
+const earthGeo = new THREE.SphereGeometry(5,64,64);
+const earthMat = new THREE.MeshStandardMaterial({ map: earthTexture });
+const earth = new THREE.Mesh(earthGeo, earthMat);
+scene.add(earth);
+
+const miniEarthGeo = new THREE.SphereGeometry(1.2,64,64);
+const miniEarthLeft = new THREE.Mesh(miniEarthGeo, earthMat);
+scene.add(miniEarthLeft);
+const miniEarthRight = new THREE.Mesh(miniEarthGeo, earthMat);
+scene.add(miniEarthRight);
+
+const moonGeo = new THREE.SphereGeometry(0,0,0);
+const moonMat = new THREE.MeshStandardMaterial({ color:0xffffff, emissive:0xffffff, emissiveIntensity:0.8 });
+const moon = new THREE.Mesh(moonGeo, moonMat);
+scene.add(moon);
+
+// Stars
+const starGeo = new THREE.BufferGeometry();
+const starCount = 800;
+const starVertices = [];
+for(let i=0;i<starCount;i++){
+  const x = THREE.MathUtils.randFloatSpread(600);
+  const y = THREE.MathUtils.randFloatSpread(600);
+  const z = THREE.MathUtils.randFloatSpread(600);
+  starVertices.push(x,y,z);
+}
+starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVertices,3));
+const starMat = new THREE.PointsMaterial({ color:0xffffff, size:0.8, transparent:true });
+const stars = new THREE.Points(starGeo, starMat);
+scene.add(stars);
+
+// Shooting stars
+const shootingStars = [];
+for(let i=0;i<3;i++){
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute([0,0,0,0,0,0],3));
+  const mat = new THREE.LineBasicMaterial({ color:0xffffff, transparent:true, opacity:0.8 });
+  const line = new THREE.Line(geom, mat);
+  line.speed = Math.random()*0.5+0.5;
+  line.reset = function(){
+    const x = THREE.MathUtils.randFloatSpread(400);
+    const y = THREE.MathUtils.randFloat(100,300);
+    this.position.set(x,y,-200);
+  }
+  line.reset();
+  scene.add(line);
+  shootingStars.push(line);
+}
+
+camera.position.z = 20;
+
+let moonAngle = 0;
+let miniAngleLeft = 0;
+let miniAngleRight = 0;
+
+function animate(){
+  requestAnimationFrame(animate);
+  earth.rotation.y += 0.002;
+
+  // Moon orbit
+  moonAngle += 0.01;
+  moon.position.x = earth.position.x + 8*Math.cos(moonAngle);
+  moon.position.z = earth.position.z + 8*Math.sin(moonAngle);
+  moon.position.y = 0;
+
+  // Mini Earth orbit
+  miniAngleLeft += 0.008;
+  miniEarthLeft.position.x = earth.position.x + 12*Math.cos(miniAngleLeft);
+  miniEarthLeft.position.z = earth.position.z + 12*Math.sin(miniAngleLeft);
+  miniEarthLeft.position.y = Math.sin(miniAngleLeft*2);
+
+  miniAngleRight += 0.008;
+  miniEarthRight.position.x = earth.position.x + 12*Math.cos(miniAngleRight + Math.PI);
+  miniEarthRight.position.z = earth.position.z + 12*Math.sin(miniAngleRight + Math.PI);
+  miniEarthRight.position.y = Math.sin(miniAngleRight*2);
+
+  miniEarthLeft.rotation.y += 0.02;
+  miniEarthRight.rotation.y += 0.02;
+
+  // Shooting stars movement
+  shootingStars.forEach(star=>{
+    star.position.x += star.speed*5;
+    star.position.y -= star.speed*2;
+    if(star.position.x>300||star.position.y<-100) star.reset();
+  });
+
+  renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener("resize", ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function highLevelClick(intersectObj, redirectPage){
+  new TWEEN.Tween(camera.position)
+    .to({ z: 12 }, 800)
+    .easing(TWEEN.Easing.Cubic.InOut)
+    .start();
+  new TWEEN.Tween(intersectObj.scale)
+    .to({x:1.5,y:1.5,z:1.5},800)
+    .easing(TWEEN.Easing.Cubic.InOut)
+    .start()
+    .onComplete(()=>{
+      fadeOverlay.style.pointerEvents = 'auto';
+      fadeOverlay.style.opacity = 1;
+      setTimeout(()=> window.location.href=redirectPage, 1000);
+    });
+}
+
+function onMouseClick(event){
+  mouse.x = (event.clientX/window.innerWidth)*2 -1;
+  mouse.y = - (event.clientY/window.innerHeight)*2 +1;
+  raycaster.setFromCamera(mouse,camera);
+
+  if(raycaster.intersectObject(earth).length>0){
+    infoPanel.classList.add('active');
+    new TWEEN.Tween(earth.position).to({ x: -10 }, 600).easing(TWEEN.Easing.Cubic.Out).start();
+    new TWEEN.Tween(earth.scale).to({ x:1.2, y:1.2, z:1.2 }, 600).yoyo(true).easing(TWEEN.Easing.Cubic.Out).start();
+  }
+
+  if(raycaster.intersectObject(miniEarthLeft).length>0){
+    highLevelClick(miniEarthLeft,'jupitar.html');
+  }
+
+  if(raycaster.intersectObject(miniEarthRight).length>0){
+    highLevelClick(miniEarthRight,'mars.html');
+  }
+}
+
+window.addEventListener('click', onMouseClick);
+
+closeBtn.addEventListener('click', ()=>{
+  infoPanel.classList.remove('active');
+  new TWEEN.Tween(earth.position).to({ x:0 }, 600).easing(TWEEN.Easing.Cubic.Out).start();
+  new TWEEN.Tween(earth.scale).to({ x:1, y:1, z:1 }, 600).easing(TWEEN.Easing.Cubic.Out).start();
+});
+
+function animateTweens(time){
+  requestAnimationFrame(animateTweens);
+  TWEEN.update(time);
+}
+animateTweens();
+</script>
+</body>
+</html>
